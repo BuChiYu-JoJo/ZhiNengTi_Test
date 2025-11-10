@@ -20,6 +20,7 @@ class TestAPITester(unittest.TestCase):
     def setUp(self):
         """测试前设置"""
         self.tester = APITester("test_token_123")
+        self.tester_with_rate = APITester("test_token_123", rate_limit=10)
     
     def test_initialization(self):
         """测试初始化"""
@@ -27,6 +28,11 @@ class TestAPITester(unittest.TestCase):
         self.assertEqual(self.tester.host, "scraperapi.thordata.com")
         self.assertEqual(len(self.tester.used_keywords), 0)
         self.assertGreater(len(self.tester.keyword_pool), 50)  # 至少50个关键词
+        
+    def test_rate_limit_initialization(self):
+        """测试速率限制初始化"""
+        self.assertEqual(self.tester_with_rate.rate_limit, 10)
+        self.assertAlmostEqual(self.tester_with_rate.request_interval, 0.1, places=2)
     
     def test_get_random_keyword_unique(self):
         """测试关键词唯一性"""

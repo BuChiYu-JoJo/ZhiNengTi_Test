@@ -32,17 +32,27 @@ def example_programmatic_test():
     print("示例 2: 编程方式执行测试")
     print("=" * 80)
     
-    # 创建API测试器
-    tester = APITester("663fba4eb51f1fb2ec007f1b7bd73f16")
+    # 创建API测试器（带速率限制）
+    tester = APITester("663fba4eb51f1fb2ec007f1b7bd73f16", rate_limit=10)
     
     # 运行3次测试，使用google引擎
     print("\n注意: 这将发送实际的API请求")
     print("如果要真正执行，请取消下面代码的注释:\n")
     
+    print("# 串行模式:")
     print("# tester.run_tests(")
     print("#     engine='google',")
     print("#     num_requests=3,")
-    print("#     output_file='example_results.csv'")
+    print("#     output_file='example_results.csv',")
+    print("#     concurrent=False")
+    print("# )")
+    print("")
+    print("# 并发模式 + 速率限制:")
+    print("# tester.run_tests(")
+    print("#     engine='google',")
+    print("#     num_requests=10,")
+    print("#     output_file='example_results.csv',")
+    print("#     concurrent=True")
     print("# )")
 
 
@@ -59,14 +69,34 @@ def example_different_engines():
         print(f"  - {engine}")
     
     print("\n使用方法:")
-    print("  命令行: python api_test.py -e bing -n 5")
-    print("  或编程: tester.run_tests(engine='bing', num_requests=5)")
+    print("  命令行串行: python api_test.py -e bing -n 5")
+    print("  命令行并发: python api_test.py -e bing -n 10 -c -r 10")
+    print("  或编程串行: tester.run_tests(engine='bing', num_requests=5, concurrent=False)")
+    print("  或编程并发: tester.run_tests(engine='bing', num_requests=10, concurrent=True)")
+
+
+def example_rate_control():
+    """速率控制示例"""
+    print("\n" + "=" * 80)
+    print("示例 4: 速率控制")
+    print("=" * 80)
+    
+    print("\n速率控制选项:")
+    print("  -r 10  : 每秒10个请求（每0.1秒发起一个）")
+    print("  -r 5   : 每秒5个请求（每0.2秒发起一个）")
+    print("  -r 20  : 每秒20个请求（每0.05秒发起一个）")
+    
+    print("\n使用方法:")
+    print("  命令行: python api_test.py -c -r 10 -n 20")
+    print("  编程方式:")
+    print("    tester = APITester('token', rate_limit=10)")
+    print("    tester.run_tests(engine='google', num_requests=20, concurrent=True)")
 
 
 def example_keyword_pool_info():
     """关键词池信息示例"""
     print("\n" + "=" * 80)
-    print("示例 4: 关键词池信息")
+    print("示例 5: 关键词池信息")
     print("=" * 80)
     
     tester = APITester("test_token")
@@ -82,7 +112,7 @@ def example_keyword_pool_info():
 def example_csv_output():
     """CSV输出格式示例"""
     print("\n" + "=" * 80)
-    print("示例 5: CSV输出格式")
+    print("示例 6: CSV输出格式")
     print("=" * 80)
     
     print("\nCSV文件将包含以下列:")
@@ -92,7 +122,7 @@ def example_csv_output():
         ('keyword', '搜索关键词', 'pizza'),
         ('status_code', 'HTTP状态码', '200'),
         ('response_time', '响应时间(秒)', '1.234'),
-        ('response_size', '响应大小(字节)', '15678'),
+        ('response_size', '响应大小(KB)', '15.31'),
         ('response_excerpt', '响应内容摘要', '{"status":"success"...'),
         ('error', '错误信息', '(如有错误)')
     ]
@@ -113,6 +143,7 @@ def main():
     example_basic_usage()
     example_programmatic_test()
     example_different_engines()
+    example_rate_control()
     example_keyword_pool_info()
     example_csv_output()
     

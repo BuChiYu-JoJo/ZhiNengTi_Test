@@ -10,23 +10,29 @@ import time
 import json
 import random
 import argparse
+import asyncio
+import concurrent.futures
 from urllib.parse import urlencode
 from datetime import datetime
+from threading import Semaphore
 
 
 class APITester:
     """API测试类，用于测试ScraperAPI并记录结果"""
     
-    def __init__(self, api_token):
+    def __init__(self, api_token, rate_limit=None):
         """
         初始化API测试器
         
         Args:
             api_token: API认证令牌
+            rate_limit: 请求速率限制 (每秒请求数)，如10表示每秒10个请求
         """
         self.api_token = api_token
         self.host = "scraperapi.thordata.com"
         self.used_keywords = set()
+        self.rate_limit = rate_limit
+        self.request_interval = 1.0 / rate_limit if rate_limit else 1.0
         
         # 预定义的关键词池，确保每次请求使用不同的关键词
         self.keyword_pool = [
@@ -126,7 +132,7 @@ class APITester:
             # 读取响应数据
             data = res.read()
             result['response_time'] = round(time.time() - start_time, 3)
-            result['response_size'] = len(data)
+            result['response_size'] = round(len(data) / 1024, 3)  # 转换为KB
             
             # 解析响应内容
             try:
@@ -165,7 +171,7 @@ class APITester:
         
         print(f"\n测试结果已保存到: {filename}")
     
-    def run_tests(self, engine, num_requests=5, output_file='test_results.csv'):
+    def run_tests(self, engine, num_requests=5, output_file='test_results.csv', concurrent=False):
         """
         运行多次测试
         
@@ -173,10 +179,30 @@ class APITester:
             engine: 搜索引擎类型
             num_requests: 请求次数
             output_file: 输出CSV文件名
+            concurrent: 是否使用并发模式
         """
         print(f"开始测试 {engine} 引擎，共 {num_requests} 次请求...")
+        if concurrent and self.rate_limit:
+            print(f"并发模式: 速率限制为每秒 {self.rate_limit} 个请求 (间隔 {self.request_interval:.3f}秒)")
+        elif concurrent:
+            print(f"并发模式: 无速率限制")
+        else:
+            print(f"串行模式: 请求间隔 {self.request_interval:.3f}秒")
         print("-" * 80)
         
+        if concurrent:
+            results = self._run_concurrent_tests(engine, num_requests)
+        else:
+            results = self._run_sequential_tests(engine, num_requests)
+        
+        # 保存结果到CSV
+        self.save_to_csv(results, output_file)
+        
+        # 打印统计信息
+        self._print_statistics(results)
+    
+    def _run_sequential_tests(self, engine, num_requests):
+        """串行执行测试"""
         results = []
         
         for i in range(num_requests):
@@ -185,26 +211,54 @@ class APITester:
             results.append(result)
             
             # 打印请求结果
-            print(f"  时间戳: {result['timestamp']}")
-            print(f"  引擎: {result['engine']}")
-            print(f"  关键词: {result['keyword']}")
-            print(f"  状态码: {result['status_code']}")
-            print(f"  响应时间: {result['response_time']}秒")
-            print(f"  响应大小: {result['response_size']}字节")
-            if result['error']:
-                print(f"  错误: {result['error']}")
-            else:
-                print(f"  响应摘要: {result['response_excerpt'][:100]}...")
+            self._print_result(result)
             
-            # 短暂延迟避免请求过快
+            # 延迟避免请求过快
             if i < num_requests - 1:
-                time.sleep(1)
+                time.sleep(self.request_interval)
         
-        # 保存结果到CSV
-        self.save_to_csv(results, output_file)
+        return results
+    
+    def _run_concurrent_tests(self, engine, num_requests):
+        """并发执行测试"""
+        results = []
         
-        # 打印统计信息
-        self._print_statistics(results)
+        # 使用线程池执行并发请求
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(num_requests, 20)) as executor:
+            # 创建所有任务
+            future_to_index = {}
+            for i in range(num_requests):
+                # 根据速率限制控制请求发起时间
+                if self.rate_limit and i > 0:
+                    time.sleep(self.request_interval)
+                future = executor.submit(self.make_request, engine)
+                future_to_index[future] = i + 1
+            
+            # 收集结果
+            for future in concurrent.futures.as_completed(future_to_index):
+                index = future_to_index[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+                    print(f"\n请求 {index}/{num_requests} 完成:")
+                    self._print_result(result)
+                except Exception as e:
+                    print(f"\n请求 {index}/{num_requests} 失败: {str(e)}")
+        
+        return results
+    
+    def _print_result(self, result):
+        """打印单个请求结果"""
+        print(f"  时间戳: {result['timestamp']}")
+        print(f"  引擎: {result['engine']}")
+        print(f"  关键词: {result['keyword']}")
+        print(f"  状态码: {result['status_code']}")
+        print(f"  响应时间: {result['response_time']}秒")
+        print(f"  响应大小: {result['response_size']}KB")
+        if result['error']:
+            print(f"  错误: {result['error']}")
+        else:
+            print(f"  响应摘要: {result['response_excerpt'][:100]}...")
     
     def _print_statistics(self, results):
         """打印测试统计信息"""
@@ -223,7 +277,7 @@ class APITester:
         print(f"成功请求: {successful_requests}")
         print(f"失败请求: {failed_requests}")
         print(f"平均响应时间: {avg_response_time:.3f}秒")
-        print(f"总数据大小: {total_data_size}字节")
+        print(f"总数据大小: {total_data_size:.3f}KB")
         print("=" * 80)
 
 
@@ -239,12 +293,16 @@ def main():
     parser.add_argument('-t', '--token', type=str, 
                        default='663fba4eb51f1fb2ec007f1b7bd73f16',
                        help='API认证令牌')
+    parser.add_argument('-c', '--concurrent', action='store_true',
+                       help='启用并发模式 (默认: 串行模式)')
+    parser.add_argument('-r', '--rate', type=float, default=None,
+                       help='请求速率限制 (每秒请求数，如10表示每秒10个请求，即每0.1秒一个)')
     
     args = parser.parse_args()
     
     # 创建测试器并运行测试
-    tester = APITester(args.token)
-    tester.run_tests(args.engine, args.num_requests, args.output)
+    tester = APITester(args.token, rate_limit=args.rate)
+    tester.run_tests(args.engine, args.num_requests, args.output, concurrent=args.concurrent)
 
 
 if __name__ == "__main__":
