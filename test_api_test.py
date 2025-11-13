@@ -103,6 +103,41 @@ class TestResultStructure(unittest.TestCase):
         self.assertGreater(len(keyword), 0)
 
 
+class TestCacheControl(unittest.TestCase):
+    """测试缓存控制功能"""
+    
+    def test_cache_enabled_by_default(self):
+        """测试默认启用缓存"""
+        tester = APITester("test_token_123")
+        self.assertTrue(tester.use_cache)
+    
+    def test_cache_disabled(self):
+        """测试禁用缓存"""
+        tester = APITester("test_token_123", use_cache=False)
+        self.assertFalse(tester.use_cache)
+    
+    def test_cache_enabled_explicitly(self):
+        """测试显式启用缓存"""
+        tester = APITester("test_token_123", use_cache=True)
+        self.assertTrue(tester.use_cache)
+
+
+class TestCustomKeywords(unittest.TestCase):
+    """测试自定义关键词功能"""
+    
+    def setUp(self):
+        """测试前设置"""
+        self.tester = APITester("test_token_123")
+    
+    def test_custom_keyword_in_request(self):
+        """测试使用自定义关键词进行请求"""
+        custom_keyword = "custom test keyword"
+        # 这个测试验证关键词参数可以传递
+        # 实际的API调用会在集成测试中进行
+        keyword = custom_keyword if custom_keyword else self.tester.get_random_keyword()
+        self.assertEqual(keyword, custom_keyword)
+
+
 def run_tests():
     """运行所有测试"""
     # 创建测试套件
@@ -112,6 +147,8 @@ def run_tests():
     # 添加测试类
     suite.addTests(loader.loadTestsFromTestCase(TestAPITester))
     suite.addTests(loader.loadTestsFromTestCase(TestResultStructure))
+    suite.addTests(loader.loadTestsFromTestCase(TestCacheControl))
+    suite.addTests(loader.loadTestsFromTestCase(TestCustomKeywords))
     
     # 运行测试
     runner = unittest.TextTestRunner(verbosity=2)

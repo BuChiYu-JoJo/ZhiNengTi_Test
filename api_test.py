@@ -20,19 +20,21 @@ from threading import Semaphore
 class APITester:
     """API测试类，用于测试ScraperAPI并记录结果"""
     
-    def __init__(self, api_token, rate_limit=None):
+    def __init__(self, api_token, rate_limit=None, use_cache=True):
         """
         初始化API测试器
         
         Args:
             api_token: API认证令牌
             rate_limit: 请求速率限制 (每秒请求数)，如10表示每秒10个请求
+            use_cache: 是否启用缓存 (默认: True)
         """
         self.api_token = api_token
         self.host = "scraperapi.thordata.com"
         self.used_keywords = set()
         self.rate_limit = rate_limit
         self.request_interval = 1.0 / rate_limit if rate_limit else 1.0
+        self.use_cache = use_cache
         
         # 预定义的关键词池，确保每次请求使用不同的关键词
         self.keyword_pool = [
@@ -111,6 +113,11 @@ class APITester:
                 "q": keyword,
                 "json": "1"
             }
+            
+            # 如果禁用缓存，添加no_cache参数
+            if not self.use_cache:
+                params["no_cache"] = "true"
+            
             payload = urlencode(params)
             
             headers = {
@@ -171,7 +178,7 @@ class APITester:
         
         print(f"\n测试结果已保存到: {filename}")
     
-    def run_tests(self, engine, num_requests=5, output_file='test_results.csv', concurrent=False):
+    def run_tests(self, engine, num_requests=5, output_file='test_results.csv', concurrent=False, keywords=None):
         """
         运行多次测试
         
@@ -180,8 +187,14 @@ class APITester:
             num_requests: 请求次数
             output_file: 输出CSV文件名
             concurrent: 是否使用并发模式
+            keywords: 自定义关键词列表，如果为None则使用随机关键词
         """
         print(f"开始测试 {engine} 引擎，共 {num_requests} 次请求...")
+        if keywords:
+            print(f"关键词模式: 使用自定义关键词列表 ({len(keywords)} 个关键词)")
+        else:
+            print(f"关键词模式: 随机关键词")
+        print(f"缓存设置: {'启用' if self.use_cache else '禁用'}")
         if concurrent and self.rate_limit:
             print(f"并发模式: 速率限制为每秒 {self.rate_limit} 个请求 (间隔 {self.request_interval:.3f}秒)")
         elif concurrent:
@@ -191,9 +204,9 @@ class APITester:
         print("-" * 80)
         
         if concurrent:
-            results = self._run_concurrent_tests(engine, num_requests)
+            results = self._run_concurrent_tests(engine, num_requests, keywords)
         else:
-            results = self._run_sequential_tests(engine, num_requests)
+            results = self._run_sequential_tests(engine, num_requests, keywords)
         
         # 保存结果到CSV
         self.save_to_csv(results, output_file)
@@ -201,13 +214,15 @@ class APITester:
         # 打印统计信息
         self._print_statistics(results)
     
-    def _run_sequential_tests(self, engine, num_requests):
+    def _run_sequential_tests(self, engine, num_requests, keywords=None):
         """串行执行测试"""
         results = []
         
         for i in range(num_requests):
             print(f"\n请求 {i+1}/{num_requests}:")
-            result = self.make_request(engine)
+            # 如果提供了自定义关键词列表，使用索引循环获取
+            keyword = keywords[i % len(keywords)] if keywords else None
+            result = self.make_request(engine, keyword)
             results.append(result)
             
             # 打印请求结果
@@ -219,7 +234,7 @@ class APITester:
         
         return results
     
-    def _run_concurrent_tests(self, engine, num_requests):
+    def _run_concurrent_tests(self, engine, num_requests, keywords=None):
         """并发执行测试"""
         results = []
         
@@ -231,7 +246,9 @@ class APITester:
                 # 根据速率限制控制请求发起时间
                 if self.rate_limit and i > 0:
                     time.sleep(self.request_interval)
-                future = executor.submit(self.make_request, engine)
+                # 如果提供了自定义关键词列表，使用索引循环获取
+                keyword = keywords[i % len(keywords)] if keywords else None
+                future = executor.submit(self.make_request, engine, keyword)
                 future_to_index[future] = i + 1
             
             # 收集结果
@@ -297,12 +314,17 @@ def main():
                        help='启用并发模式 (默认: 串行模式)')
     parser.add_argument('-r', '--rate', type=float, default=None,
                        help='请求速率限制 (每秒请求数，如10表示每秒10个请求，即每0.1秒一个)')
+    parser.add_argument('-k', '--keywords', type=str, nargs='+',
+                       help='自定义关键词列表 (默认: 使用随机关键词)')
+    parser.add_argument('-nc', '--no-cache', action='store_true',
+                       help='禁用缓存 (默认: 启用缓存)')
     
     args = parser.parse_args()
     
     # 创建测试器并运行测试
-    tester = APITester(args.token, rate_limit=args.rate)
-    tester.run_tests(args.engine, args.num_requests, args.output, concurrent=args.concurrent)
+    tester = APITester(args.token, rate_limit=args.rate, use_cache=not args.no_cache)
+    tester.run_tests(args.engine, args.num_requests, args.output, 
+                    concurrent=args.concurrent, keywords=args.keywords)
 
 
 if __name__ == "__main__":

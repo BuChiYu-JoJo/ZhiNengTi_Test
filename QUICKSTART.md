@@ -62,7 +62,31 @@ python api_test.py -o my_test_results.csv
 python api_test.py -c -e google -n 20 -r 10 -o google_test.csv
 ```
 
-### 7. 查看帮助
+### 7. 使用自定义关键词
+```bash
+# 使用指定的关键词
+python api_test.py -k pizza burger sushi
+
+# 使用多个自定义关键词，执行10次请求（关键词会循环使用）
+python api_test.py -k apple orange banana -n 10
+
+# 带引号的多词关键词
+python api_test.py -k "machine learning" "data science" "artificial intelligence"
+```
+
+### 8. 缓存控制
+```bash
+# 禁用缓存（获取最新数据）
+python api_test.py --no-cache
+
+# 禁用缓存 + 自定义关键词
+python api_test.py -k "latest news" "current events" --no-cache
+
+# 完整示例：自定义关键词、禁用缓存、并发模式
+python api_test.py -k weather forecast news -n 9 --no-cache -c -r 5
+```
+
+### 9. 查看帮助
 ```bash
 python api_test.py -h
 ```
@@ -97,7 +121,8 @@ python example_usage.py
 ## 关键特性
 
 ✅ **动态引擎参数** - 通过命令行轻松切换搜索引擎  
-✅ **关键词唯一性** - 115+关键词池，保证每次请求使用不同关键词  
+✅ **灵活关键词选择** - 支持随机关键词或自定义关键词列表  
+✅ **缓存控制** - 可选择启用或禁用API请求缓存  
 ✅ **并发请求支持** - 可并发执行测试，显著提高效率  
 ✅ **精确速率控制** - 可设置每秒请求数（如10表示每0.1秒一个）  
 ✅ **详细日志** - 记录所有请求细节到CSV文件  
@@ -128,10 +153,25 @@ python api_test.py -e bing -n 10 -o bing.csv
 python api_test.py -e yahoo -n 10 -o yahoo.csv
 ```
 
+### 场景4：特定关键词测试
+```bash
+# 测试特定业务关键词
+python api_test.py -k "product A" "product B" "product C" -n 15 -o product_test.csv
+
+# 禁用缓存以获取实时数据
+python api_test.py -k "latest stock price" "market news" --no-cache -n 10
+```
+
 ## 注意事项
 
 1. 使用并发模式时建议设置合理的速率限制，避免过载
 2. 每次请求之间的时间间隔 = 1 / 速率（如速率10表示0.1秒间隔）
 3. 响应内容仅保存前200字符作为摘要
 4. 响应大小单位为KB（千字节），保留3位小数
-5. 当关键词池用完后会自动重置，继续使用不重复的关键词
+5. **关键词模式**：
+   - 随机模式：当关键词池用完后会自动重置，继续使用不重复的关键词
+   - 自定义模式：当请求次数超过关键词数量时，会循环使用提供的关键词
+6. **缓存控制**：
+   - 默认启用缓存以提高性能
+   - 使用 `--no-cache` 禁用缓存以获取最新数据
+   - 禁用缓存时，请求参数中会添加 `no_cache=true`

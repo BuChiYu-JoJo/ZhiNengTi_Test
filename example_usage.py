@@ -109,10 +109,69 @@ def example_keyword_pool_info():
     print(f"\n... 共 {len(tester.keyword_pool)} 个关键词")
 
 
+def example_custom_keywords():
+    """自定义关键词示例"""
+    print("\n" + "=" * 80)
+    print("示例 6: 自定义关键词")
+    print("=" * 80)
+    
+    print("\n使用自定义关键词列表进行测试:")
+    print("\n命令行方式:")
+    print("  python api_test.py -k pizza burger sushi")
+    print("  python api_test.py -k \"machine learning\" \"data science\" \"AI\" -n 10")
+    
+    print("\n编程方式:")
+    print("  tester = APITester('token')")
+    print("  custom_keywords = ['apple', 'orange', 'banana']")
+    print("  tester.run_tests(")
+    print("      engine='google',")
+    print("      num_requests=9,")
+    print("      keywords=custom_keywords")
+    print("  )")
+    
+    print("\n当请求数量超过关键词数量时，关键词会循环使用:")
+    keywords = ['apple', 'orange', 'banana']
+    print(f"  关键词列表: {keywords}")
+    print("  请求9次的关键词分配:")
+    for i in range(9):
+        print(f"    请求 {i+1}: {keywords[i % len(keywords)]}")
+
+
+def example_cache_control():
+    """缓存控制示例"""
+    print("\n" + "=" * 80)
+    print("示例 7: 缓存控制")
+    print("=" * 80)
+    
+    print("\n缓存设置:")
+    print("  默认: 启用缓存（提高性能，使用缓存数据）")
+    print("  禁用: 使用 --no-cache 参数（获取最新数据）")
+    
+    print("\n命令行方式:")
+    print("  # 使用缓存（默认）")
+    print("  python api_test.py -e google -n 5")
+    print("")
+    print("  # 禁用缓存")
+    print("  python api_test.py -e google -n 5 --no-cache")
+    
+    print("\n编程方式:")
+    print("  # 启用缓存（默认）")
+    print("  tester_with_cache = APITester('token', use_cache=True)")
+    print("  tester_with_cache.run_tests(engine='google', num_requests=5)")
+    print("")
+    print("  # 禁用缓存")
+    print("  tester_no_cache = APITester('token', use_cache=False)")
+    print("  tester_no_cache.run_tests(engine='google', num_requests=5)")
+    
+    print("\n请求参数差异:")
+    print("  启用缓存: engine=google&q=pizza&json=1")
+    print("  禁用缓存: engine=google&q=pizza&json=1&no_cache=true")
+
+
 def example_csv_output():
     """CSV输出格式示例"""
     print("\n" + "=" * 80)
-    print("示例 6: CSV输出格式")
+    print("示例 8: CSV输出格式")
     print("=" * 80)
     
     print("\nCSV文件将包含以下列:")
@@ -145,6 +204,8 @@ def main():
     example_different_engines()
     example_rate_control()
     example_keyword_pool_info()
+    example_custom_keywords()
+    example_cache_control()
     example_csv_output()
     
     print("\n" + "=" * 80)

@@ -9,10 +9,15 @@ AI API 测试脚本项目
 ## 功能特点
 
 1. **动态引擎参数**: 支持通过命令行参数指定不同的搜索引擎（google, bing, yahoo等）
-2. **随机关键词生成**: 内置100+关键词池，确保每次请求使用不同的搜索关键词
-3. **并发请求支持**: 支持异步并发请求，可显著提高测试效率
-4. **速率控制**: 可精确控制请求速率（如每秒10个请求）
-5. **详细日志记录**: 将以下信息保存到 CSV 文件：
+2. **灵活关键词选择**: 支持随机关键词生成或自定义关键词列表
+   - 随机模式：内置100+关键词池，确保每次请求使用不同的搜索关键词
+   - 自定义模式：可指定自己的关键词列表，适合特定场景测试
+3. **缓存控制**: 可选择启用或禁用API请求缓存
+   - 默认启用缓存以提高性能
+   - 使用 `--no-cache` 参数禁用缓存以获取最新数据
+4. **并发请求支持**: 支持异步并发请求，可显著提高测试效率
+5. **速率控制**: 可精确控制请求速率（如每秒10个请求）
+6. **详细日志记录**: 将以下信息保存到 CSV 文件：
    - 请求时间戳
    - 搜索引擎类型
    - 搜索关键词
@@ -56,6 +61,15 @@ python api_test.py -o my_results.csv
 # 指定API令牌
 python api_test.py -t YOUR_API_TOKEN
 
+# 使用自定义关键词
+python api_test.py -k pizza burger sushi
+
+# 禁用缓存
+python api_test.py --no-cache
+
+# 使用自定义关键词并禁用缓存
+python api_test.py -k "machine learning" "data science" "AI" --no-cache
+
 # 启用并发模式
 python api_test.py -c
 
@@ -67,6 +81,9 @@ python api_test.py -c -r 10 -n 20
 
 # 组合使用多个参数
 python api_test.py -e google -n 20 -o google_test.csv -c -r 5
+
+# 完整示例：使用自定义关键词、禁用缓存、并发模式
+python api_test.py -e google -k apple orange banana -n 6 --no-cache -c -r 5 -o results.csv
 ```
 
 ### 命令行参数说明
@@ -75,6 +92,12 @@ python api_test.py -e google -n 20 -o google_test.csv -c -r 5
 - `-n, --num-requests`: 请求次数（默认：5）
 - `-o, --output`: 输出CSV文件名（默认：test_results.csv）
 - `-t, --token`: API认证令牌（默认使用示例令牌）
+- `-k, --keywords`: 自定义关键词列表（默认：使用随机关键词）
+  - 可以指定一个或多个关键词
+  - 当请求数量超过关键词数量时，会循环使用关键词
+- `-nc, --no-cache`: 禁用缓存（默认：启用缓存）
+  - 使用此参数时，请求中会添加 `no_cache=true` 参数
+  - 不使用此参数时，启用缓存以提高性能
 - `-c, --concurrent`: 启用并发模式（默认：串行模式）
 - `-r, --rate`: 请求速率限制，每秒请求数（如10表示每秒10个请求，即每0.1秒发起一个）
 
