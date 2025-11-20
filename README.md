@@ -4,9 +4,24 @@ AI API 测试脚本项目
 
 ## 项目简介
 
-本项目提供了一个用于测试 ScraperAPI 服务的自动化测试脚本。该脚本支持动态参数配置、随机关键词生成，并将测试结果保存到 CSV 文件中。
+本项目提供了两个专业的API性能测试脚本：
 
-## 功能特点
+1. **api_test.py** - ScraperAPI测试脚本
+   - 用于测试 ScraperAPI (thordata.com) 服务
+   - 支持动态参数配置、随机关键词生成
+   - 可控制缓存行为和请求速率
+   
+2. **serpapi_test.py** - SerpAPI性能测试脚本 (新增)
+   - 用于测试 SerpAPI (serpapi.com) 服务
+   - 支持26个搜索引擎的批量性能测试
+   - 提供完整的性能统计和分析
+   - **详细文档**: [SERPAPI_README.md](SERPAPI_README.md)
+
+---
+
+## ScraperAPI 测试脚本 (api_test.py)
+
+### 功能特点
 
 1. **动态引擎参数**: 支持通过命令行参数指定不同的搜索引擎（google, bing, yahoo等）
 2. **灵活关键词选择**: 支持随机关键词生成或自定义关键词列表
@@ -196,6 +211,86 @@ api_test.py
 │   └── _print_statistics: 打印统计信息
 └── main: 主函数，处理命令行参数
 ```
+
+---
+
+## SerpAPI 性能测试脚本 (serpapi_test.py)
+
+### 概述
+
+专为SerpAPI性能测试设计的脚本，支持批量测试26个搜索引擎，提供完整的性能指标分析。
+
+### 核心特性
+
+- ✅ **26个搜索引擎支持**: Google、Bing、Yahoo及各专项引擎
+- ✅ **批量测试**: 支持 `--all-engines` 测试所有引擎
+- ✅ **精确响应时间**: 仅测量网络请求时间（不含排队、处理等）
+- ✅ **智能响应验证**: 正确识别成功/失败，覆盖所有错误场景
+- ✅ **可选详细记录**: 使用 `--save-details` 启用详细CSV日志
+- ✅ **汇总统计表**: 10项完整性能指标（产品、引擎、请求数、并发数、速率、成功率、响应时间等）
+- ✅ **禁用缓存**: 自动添加 `no_cache=true` 获取真实响应时间
+
+### 快速开始
+
+```bash
+# 列出所有支持的引擎
+python serpapi_test.py --list-engines
+
+# 测试单个引擎
+python serpapi_test.py -k YOUR_API_KEY -e google -n 10 -c 5
+
+# 测试多个引擎
+python serpapi_test.py -k YOUR_API_KEY -e google bing yahoo -n 20 -c 10
+
+# 测试所有引擎
+python serpapi_test.py -k YOUR_API_KEY --all-engines -n 10 -c 5
+
+# 启用详细CSV记录
+python serpapi_test.py -k YOUR_API_KEY -e google -n 10 -c 5 --save-details
+```
+
+### 输出示例
+
+**汇总统计表** (serpapi_summary_statistics.csv):
+```
+产品类别,引擎,请求总数,并发数,请求速率(s/req),成功次数,成功率(%),成功平均响应时间(s),并发完成时间(s),成功平均响应大小(KB)
+SerpAPI,google,10,5,0.324,10,100.0,0.312,3.245,45.678
+SerpAPI,bing,10,5,0.287,10,100.0,0.275,2.874,38.234
+```
+
+### 响应验证逻辑
+
+脚本智能判断SerpAPI响应成功/失败：
+
+**成功条件**:
+1. HTTP状态码为200
+2. 无 `error` 字段
+3. 包含结果字段（organic_results、shopping_results等）
+
+**失败情况**:
+- 错误状态码（401、403、429等）
+- 包含 `error` 字段
+- 无结果字段
+- JSON解析失败
+- 网络错误
+
+### 完整文档
+
+详细使用说明、参数配置、场景示例请参考: **[SERPAPI_README.md](SERPAPI_README.md)**
+
+---
+
+## 脚本对比
+
+| 功能 | api_test.py | serpapi_test.py |
+|------|------------|-----------------|
+| 目标API | ScraperAPI | SerpAPI |
+| 请求方法 | POST | GET |
+| 引擎支持 | 动态配置 | 26个预定义 |
+| 批量测试 | 单引擎 | 多引擎/全引擎 |
+| 详细CSV | 始终生成 | 可选 |
+| 统计指标 | 基础 | 10项完整指标 |
+| 响应验证 | 状态码 | 智能验证 |
 
 ## 许可证
 
