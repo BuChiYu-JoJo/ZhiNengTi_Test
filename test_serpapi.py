@@ -123,6 +123,30 @@ class TestSerpAPITester(unittest.TestCase):
         self.assertEqual(stats['成功率(%)'], 66.67)
         self.assertEqual(stats['成功平均响应时间(s)'], 1.5)
         self.assertEqual(stats['成功平均响应大小(KB)'], 15.0)
+        # P90应该是第90百分位的值，对于[1.0, 2.0]，P90是2.0
+        self.assertEqual(stats['P90延迟(s)'], 2.0)
+    
+    def test_calculate_statistics_p90_multiple_values(self):
+        """测试P90延迟计算 - 多个值"""
+        results = [
+            {'success': True, 'response_time': 1.0, 'response_size': 10.0},
+            {'success': True, 'response_time': 2.0, 'response_size': 20.0},
+            {'success': True, 'response_time': 3.0, 'response_size': 30.0},
+            {'success': True, 'response_time': 4.0, 'response_size': 40.0},
+            {'success': True, 'response_time': 5.0, 'response_size': 50.0},
+            {'success': True, 'response_time': 6.0, 'response_size': 60.0},
+            {'success': True, 'response_time': 7.0, 'response_size': 70.0},
+            {'success': True, 'response_time': 8.0, 'response_size': 80.0},
+            {'success': True, 'response_time': 9.0, 'response_size': 90.0},
+            {'success': True, 'response_time': 10.0, 'response_size': 100.0},
+        ]
+        
+        stats = self.tester._calculate_statistics(
+            'SerpAPI', 'google', results, 10, 5, 10.0
+        )
+        
+        # P90对于10个值[1.0...10.0]，索引为int(10*0.9)=9，应该是10.0
+        self.assertEqual(stats['P90延迟(s)'], 10.0)
 
 
 class TestResponseValidation(unittest.TestCase):
