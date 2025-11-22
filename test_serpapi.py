@@ -85,24 +85,6 @@ class TestSerpAPITester(unittest.TestCase):
         error = self.tester._extract_error_message(response)
         self.assertIn('Unknown', error)
     
-    def test_extract_response_summary(self):
-        """测试响应摘要提取"""
-        response = {
-            'search_information': {'total_results': '1000'},
-            'organic_results': [1, 2, 3],
-            'shopping_results': [1, 2]
-        }
-        summary = self.tester._extract_response_summary(response)
-        self.assertIn('total_results:1000', summary)
-        self.assertIn('organic:3', summary)
-        self.assertIn('shopping:2', summary)
-    
-    def test_extract_response_summary_empty(self):
-        """测试响应摘要提取 - 空响应"""
-        response = {}
-        summary = self.tester._extract_response_summary(response)
-        self.assertEqual(summary, 'Success')
-    
     def test_calculate_statistics(self):
         """测试统计计算"""
         results = [
@@ -145,8 +127,8 @@ class TestSerpAPITester(unittest.TestCase):
             'SerpAPI', 'google', results, 10, 5, 10.0
         )
         
-        # P90对于10个值[1.0...10.0]，索引为int(10*0.9)=9，应该是10.0
-        self.assertEqual(stats['P90延迟(s)'], 10.0)
+        # P90对于10个值[1.0...10.0]，使用ceil(10*0.9)-1 = 9-1 = 8，索引8是9.0
+        self.assertEqual(stats['P90延迟(s)'], 9.0)
 
 
 class TestResponseValidation(unittest.TestCase):

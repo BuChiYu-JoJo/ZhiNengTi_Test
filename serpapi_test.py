@@ -14,6 +14,7 @@ from urllib.parse import urlencode, urlparse
 from datetime import datetime
 from collections import defaultdict
 import ssl
+import math
 
 
 class SerpAPITester:
@@ -110,11 +111,12 @@ class SerpAPITester:
                 response_json = json.loads(data.decode('utf-8'))
                 result['success'] = self._is_response_successful(response_json, response.status)
                 
-                # 保存响应摘要
-                if result['success']:
-                    result['response_excerpt'] = self._extract_response_summary(response_json)
-                else:
-                    # 如果失败，记录错误信息
+                # 保存部分真实响应内容（前200字符）
+                response_text = json.dumps(response_json, ensure_ascii=False)
+                result['response_excerpt'] = response_text[:200]
+                
+                # 如果失败，记录错误信息
+                if not result['success']:
                     result['error'] = self._extract_error_message(response_json)
                     
             except json.JSONDecodeError as e:
@@ -349,7 +351,10 @@ class SerpAPITester:
         if successful_results:
             response_times = sorted([r['response_time'] for r in successful_results if r['response_time']])
             if response_times:
-                p90_index = int(len(response_times) * 0.9)
+                # 使用ceil(0.9 × N)计算P90索引
+                p90_index = math.ceil(len(response_times) * 0.9) - 1  # -1因为索引从0开始
+                if p90_index < 0:
+                    p90_index = 0
                 if p90_index >= len(response_times):
                     p90_index = len(response_times) - 1
                 p90_latency = round(response_times[p90_index], 3)
